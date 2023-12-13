@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>对话机器人</title>
+    <style>
+        body {
+            background-color: #f5f5f5;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .message-container {
+            margin: 10px 0;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .message-container.user-message {
+            justify-content: flex-start;
+        }
+
+        .message {
+            padding: 10px;
+            max-width: 70%;
+            border-radius: 4px;
+        }
+
+        .user-message {
+            background-color: #e6f5ff;
+            color: #0066cc;
+        }
+
+        .bot-message {
+            background-color: #f1f1f1;
+            color: #333333;
+        }
+
+        .input-container {
+            display: flex;
+            margin-top: 20px;
+        }
+
+        .input-container input {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #f5f5f5;
+        }
+
+        .input-container button {
+            padding: 10px 20px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #0066cc;
+            color: #fff;
+        }
+
+        /* 新增的CSS样式 */
+        .title {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333333;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1>对话机器人</h1>
+        <div id="conversation"></div>
+        <div class="input-container">
+            <input type="text" id="input" placeholder="请输入问题">
+            <button id="sendButton">发送</button>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        var newsList = []; // 保存新闻列表数据
+        var isSelectingNewsType = false; // 是否正在选择新闻类型
+
+        function getNewsList() {
+            var apiURL = 'https://www.mxnzp.com/api/news/types/v2?app_id=nleephozzwjuomtt&app_secret=FrJopx8QTt8rSQJ3shWWgvovGAbuDAqw';
+
+            fetch(apiURL)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 1) {
+                        newsList = data.data;
+                        addMessage('请选择要查看的新闻类型：', false);
+                        // 显示供用户选择的新闻类型列表
+                        for (var j = 0; j < newsList.length; j++) {
+                            addMessage((j + 1) + '. ' + newsList[j].typeName, false);
+                        }
+
+                        isSelectingNewsType = true;
+                    } else {
+                        addMessage('获取新闻类型列表失败', false);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+        function getNewsDetails(newsId) {
+            var apiURL = 'https://www.mxnzp.com/api/news/details/v2?newsId=' + encodeURIComponent(newsId) + '&app_id=nleephozzwjuomtt&app_secret=FrJopx8QTt8rSQJ3shWWgvovGAbuDAqw';
+
+            fetch(apiURL)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 1) {
+                        var newsData = data.data;
+                        // 处理新闻详情数据
+
+                        // 示例代码：输出新闻内容
+                        for (var i = 0; i < newsData.items.length; i++) {
+                            addMessage(newsData.items[i].content, false);
+                        }
+                    } else {
+                        addMessage('获取新闻详情失败', false);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        $(document).ready(function () {
+            $('#input').keypress(function (e) {
+                if (e.which === 13) {
+                    sendMessage();
+                }
+            });
+
+            $('#sendButton').click(function () {
+                sendMessage();
+            });
+
+            function sendMessage() {
+                var inputElement = document.getElementById('input');
+                var message = inputElement.value;
+                inputElement.value = '';
+
+                if (message.trim() !== '') {
+                    addMessage(message, true);
+
+                    if (message.includes('天气')) {
+                        var city = message.replace('天气', '').trim();
+                        getWeather(city);
+                    } else if (message.includes('段子')) {
+                        getJoke();
+                    } else if (message.includes('新闻')) {
+                        getNewsList(); // 当用户输入的消息中包含"新闻"关键词时，调用获取新闻列表的函数
+                    } else if (isSelectingNewsType && !isNaN(message)) {
+                        var index = parseInt(message) - 1;
+                        if (index >= 0 && index < newsList.length) {
+                            var selectedNews = newsList[index];
+                            addMessage('您选择的是：' + selectedNews.typeName, false);
+                            // 调用新闻详情API，获取选定新闻的详细信息
+                            getNewsDetails(selectedNews.typeId);
+                        } else {
+                            addMessage('无效的选项，请重新选择！', false);
+                        }
+
+                        isSelectingNewsType = false;
+                    } else {
+                        getBotReply(message);
+                    }
+                }
+            }
+
+            function getWeather(city) {
+                var apiURL = 'https://www.mxnzp.com/api/weather/current/' + encodeURIComponent(city) + '?app_id=nleephozzwjuomtt&app_secret=FrJopx8QTt8rSQJ3shWWgvovGAbuDAqw';
+
+                fetch(apiURL)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.code === 1) {
+                            var weatherInfo = "地点：" + data.data.address +
+                                "\n温度：" + data.data.temp +
+                                "\n天气：" + data.data.weather +
+                                "\n风向：" + data.data.windDirection +
+                                "\n风力：" + data.data.windPower +
+                                "\n湿度：" + data.data.humidity +
+                                "\n报告时间：" + data.data.reportTime;
+
+                            addMessage(weatherInfo, false);
+                        } else {
+                            addMessage('获取天气信息失败，请确认城市名称是否正确。', false);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }
+
+            function getJoke() {
+                var apiURL = 'https://www.mxnzp.com/api/jokes/list?page=1&app_id=nleephozzwjuomtt&app_secret=FrJopx8QTt8rSQJ3shWWgvovGAbuDAqw';
+
+                fetch(apiURL)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.code === 1) {
+                            var jokes = data.data.list;
+                            if (jokes.length > 0) {
+                                var randomIndex = Math.floor(Math.random() * jokes.length);
+                                var joke = jokes[randomIndex];
+
+                                var jokeInfo = "好的！" + joke.content +
+                                    "\n更新时间：" + joke.updateTime;
+
+                                addMessage(jokeInfo, false);
+                            } else {
+                                addMessage('暂时没有段子', false);
+                            }
+                        } else {
+                            addMessage('获取段子失败', false);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }
+
+            function getBotReply(message) {
+                var apiURL = 'https://api.ownthink.com/bot?appid=345f56b593f3c6ead0749ee05ed709f8';
+                var userId = '0mMcxdKv';
+                var spoken = encodeURIComponent(message);
+                var url = apiURL + '&userid=' + userId + '&spoken=' + spoken;
+
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        var reply = data.data.info.text;
+                        addMessage(reply, false);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }
+
+            function addMessage(message, isUser) {
+                var messageContainer = document.getElementById('conversation');
+                var messageElement = document.createElement('div');
+                messageElement.classList.add('message-container');
+                if (isUser) {
+                    messageElement.classList.add('user-message');
+                } else {
+                    messageElement.classList.add('bot-message');
+                }
+                var messageContent = document.createElement('div');
+                messageContent.classList.add('message');
+                messageContent.innerText = message;
+                messageElement.appendChild(messageContent);
+                messageContainer.appendChild(messageElement);
+            }
+        });
+    </script>
+</body>
+
+</html>
