@@ -1,9 +1,28 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh">
 
 <head>
     <title>对话机器人</title>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'self';">
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
     <style>
+        h1 {
+            color: #353434;
+            font-size: 30px;
+            text-align: center;
+        }
+
+        h5 {
+            color: #353434;
+            font-size: medium-large;
+            text-align: center;
+            width: auto;
+            height: 10px;
+            margin-bottom: 10px;
+            margin-top: -5px;
+        }
+
         pre {
             background-color: #f5f5f5;
             border: 1px solid #ccc;
@@ -76,15 +95,33 @@
             color: #fff;
         }
 
-        /* 新增的CSS样式 */
         .title {
             text-align: center;
             font-size: 24px;
             margin-bottom: 20px;
             color: #333333;
         }
+
+        .container asks {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .container details-section {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>对话机器人</h1>
@@ -94,10 +131,16 @@
             <button id="sendButton">发送</button>
         </div>
     </div>
-    <div class="container">
+    <div class="container details-section">
+        <h2 style="color: #000000; font-size: medium; text-align: center;">更多详情</h2>
+        <p>感谢您的支持！</p>
+        <a href="https://dudulittle.mysxl.cn"
+            style="font-size: small; color: darkgray; text-align: center;">如有bug，请到此处反馈！</a>
+    </div>
+    <div class="container asks">
         <div class="row">
             <div class="col-md-12" style="font-size: 20px; color: #666">
-                <h5></h5>请输入相关问题。如果你不知道要问啥，可以尝试以下问题：</h5>
+                <h5>请输入相关问题。如果你不知道要问啥，可以尝试以下问题：</h5>
                 <ul>
                     <li>王翰茗是谁</li>
                     <li>凸(艹皿艹 )</li>
@@ -110,9 +153,46 @@
     </div>
 </body>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<meta http-equiv="Content-Security-Policy" content="frame-ancestors 'self'; upgrade-insecure-requests;">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self';">
+<meta http-equiv="Content-Security-Policy" content="frame-ancestors 'self';">
+<meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
 <script>
     var newsList = []; // 保存新闻列表数据
     var isSelectingNewsType = false; // 是否正在选择新闻类型
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('click', function (event) {
+            if (event.button !== 0) {
+                event.preventDefault();
+            }
+        });
+
+        document.addEventListener('contextmenu', function (event) {
+            event.preventDefault();
+        });
+    });
+
+    document.addEventListener('contextmenu', function (event) {
+        event.preventDefault();
+    });
+
+
+    document.onkeydown = function (e) {
+        if (e.keyCode === 123) {
+            return false;
+        }
+    };
+
+    document.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.ctrlKey) {
+            event.preventDefault();
+        }
+    });
 
     function getNewsList() {
         var apiURL = 'https://www.mxnzp.com/api/news/types/v2?app_id=nleephozzwjuomtt&app_secret=FrJopx8QTt8rSQJ3shWWgvovGAbuDAqw';
@@ -185,21 +265,24 @@
                 } else if (message.includes('段子')) {
                     getJoke();
                 } else if (message.includes('新闻')) {
-                    getNewsList(); // 当用户输入的消息中包含"新闻"关键词时，调用获取新闻列表的函数
+                    getNewsList();
                 } else if (isSelectingNewsType && !isNaN(message)) {
                     var index = parseInt(message) - 1;
                     if (index >= 0 && index < newsList.length) {
                         var selectedNews = newsList[index];
                         addMessage('您选择的是：' + selectedNews.typeName, false);
-                        // 调用新闻详情API，获取选定新闻的详细信息
                         getNewsDetails(selectedNews.typeId);
                     } else {
                         addMessage('无效的选项，请重新选择！', false);
                     }
-
                     isSelectingNewsType = false;
                 } else {
-                    getBotReply(message);
+                    // 仅当消息包含关键词“ChatGPT”时调用 ChatGPT API
+                    if (message.toLowerCase().includes('chatgpt')) {
+                        getChatGPTReply(message);
+                    } else {
+                        getBotReply(message);
+                    }
                 }
             }
         }
@@ -272,6 +355,40 @@
                 });
         }
 
+        function getChatGPTReply(message) {
+            var chatGPTApiURL = 'https://api.example.com/chatgpt';
+            var apiKey = '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';
+
+            fetch(chatGPTApiURL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + apiKey,
+                },
+                body: JSON.stringify({ message: message }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    var reply = data.response; // 根据API响应格式调整此处
+                    addChatGPTReply(reply);
+                })
+                .catch(error => {
+                    console.error('错误:', error);
+                });
+        }
+
+        function addChatGPTReply(reply) {
+            var chatGPTResponseContainer = document.getElementById('chatGPTResponse');
+            var replyElement = document.createElement('div');
+            replyElement.classList.add('message-container');
+            replyElement.classList.add('bot-message');
+            var replyContent = document.createElement('div');
+            replyContent.classList.add('message');
+            replyContent.innerText = reply;
+            replyElement.appendChild(replyContent);
+            chatGPTResponseContainer.appendChild(replyElement);
+        }
+
         function addMessage(message, isUser) {
             var messageContainer = document.getElementById('conversation');
             var messageElement = document.createElement('div');
@@ -290,4 +407,5 @@
     });
 </script>
 </body>
+
 </html>
